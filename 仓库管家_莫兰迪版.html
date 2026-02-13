@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>仓库管家 · 进销存管理系统</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f2eeea;
+  --surface: #ffffff;
+  --surface2: #f7f4f1;
+  --surface3: #ede8e3;
+  --border: #ddd5cc;
+  --text: #4a4340;
+  --text2: #7d7572;
+  --text3: #a89e9a;
+  --accent: #8fa7c4;
+  --accent2: #7692b3;
+  --green: #8bb5a2;
+  --green-bg: rgba(139,181,162,0.15);
+  --red: #c98a8a;
+  --red-bg: rgba(201,138,138,0.15);
+  --yellow: #c9b07a;
+  --yellow-bg: rgba(201,176,122,0.15);
+  --purple: #a993b8;
+  --purple-bg: rgba(169,147,184,0.15);
+  --cyan: #7fb5b0;
+  --cyan-bg: rgba(127,181,176,0.15);
+  --shadow: 0 2px 16px rgba(74,67,64,0.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans SC',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+
+.header { background:var(--surface); border-bottom:1px solid var(--border); padding:0 28px; height:60px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+.logo { display:flex; align-items:center; gap:10px; font-weight:700; font-size:18px; letter-spacing:-0.5px; }
+.logo-icon { width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--purple));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px; }
+.header-actions { display:flex; gap:8px; align-items:center; }
+
+.btn { display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap; }
+.btn:hover { background:var(--surface3);border-color:var(--accent); }
+.btn-primary { background:var(--accent);border-color:var(--accent);color:#fff; }
+.btn-primary:hover { background:var(--accent2); }
+.btn-danger { color:var(--red); }
+.btn-danger:hover { background:var(--red-bg);border-color:var(--red); }
+.btn-green { background:var(--green);border-color:var(--green);color:#fff; }
+.btn-green:hover { opacity:.9; }
+.btn-sm { padding:5px 10px;font-size:12px;border-radius:7px; }
+
+.app { display:flex; min-height:calc(100vh - 60px); }
+.sidebar { width:220px;background:var(--surface);border-right:1px solid var(--border);padding:16px 10px;flex-shrink:0;overflow-y:auto;max-height:calc(100vh - 60px); }
+.nav-item { display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:9px;color:var(--text2);cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;margin-bottom:1px; }
+.nav-item:hover { background:var(--surface2);color:var(--text); }
+.nav-item.active { background:rgba(143,167,196,.15);color:var(--accent); }
+.nav-item .icon { font-size:16px;width:22px;text-align:center; }
+.nav-section { font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;padding:16px 12px 6px; }
+
+.main { flex:1;padding:24px 28px;overflow-y:auto;max-height:calc(100vh - 60px); }
+.page { display:none; }
+.page.active { display:block; }
+.page-title { font-size:20px;font-weight:700;margin-bottom:18px; }
+
+.stats { display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px; }
+.stat-card { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;transition:all .2s; }
+.stat-card:hover { border-color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow); }
+.stat-label { font-size:12px;color:var(--text3);font-weight:500;margin-bottom:6px; }
+.stat-value { font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:600;letter-spacing:-1px; }
+.stat-sub { font-size:11px;color:var(--text3);margin-top:4px; }
+
+.toolbar { display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap; }
+.search-box { flex:1;min-width:180px;position:relative; }
+.search-box input { width:100%;padding:9px 12px 9px 36px;background:var(--surface);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .2s; }
+.search-box input:focus { border-color:var(--accent); }
+.search-box input::placeholder { color:var(--text3); }
+.search-box .si { position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px; }
+
+select,.form-input { padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:inherit;font-size:13px;outline:none;cursor:pointer; }
+select:focus,.form-input:focus { border-color:var(--accent); }
+.form-input { width:100%;cursor:text; }
+textarea.form-input { resize:vertical;min-height:60px; }
+
+.table-wrap { background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px; }
+.table-header { padding:14px 16px;border-bottom:1px solid var(--border);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:space-between; }
+table { width:100%;border-collapse:collapse; }
+th { text-align:left;padding:11px 14px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border);background:var(--surface2);cursor:pointer;user-select:none;white-space:nowrap; }
+td { padding:11px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:rgba(143,167,196,.06); }
+
+.badge { display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:600; }
+.badge-ok { background:var(--green-bg);color:var(--green); }
+.badge-low { background:var(--yellow-bg);color:var(--yellow); }
+.badge-out { background:var(--red-bg);color:var(--red); }
+.badge-purple { background:var(--purple-bg);color:var(--purple); }
+.badge-cyan { background:var(--cyan-bg);color:var(--cyan); }
+.badge-pending { background:var(--yellow-bg);color:var(--yellow); }
+.badge-done { background:var(--green-bg);color:var(--green); }
+.badge-cancel { background:var(--red-bg);color:var(--red); }
+
+.actions-cell { display:flex;gap:4px; }
+.action-btn { width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid transparent;background:transparent;color:var(--text3);cursor:pointer;font-size:14px;transition:all .15s; }
+.action-btn:hover { background:var(--surface3);color:var(--text);border-color:var(--border); }
+.action-btn.del:hover { background:var(--red-bg);color:var(--red); }
+
+.modal-overlay { position:fixed;inset:0;background:rgba(74,67,64,.3);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity .2s; }
+.modal-overlay.open { opacity:1;pointer-events:all; }
+.modal { background:var(--surface);border:1px solid var(--border);border-radius:16px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(74,67,64,.15);transform:translateY(16px);transition:transform .25s; }
+.modal-overlay.open .modal { transform:translateY(0); }
+.modal-header { display:flex;align-items:center;justify-content:space-between;padding:20px 22px 0; }
+.modal-title { font-size:17px;font-weight:700; }
+.modal-close { width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:7px;border:none;background:transparent;color:var(--text3);cursor:pointer;font-size:18px; }
+.modal-close:hover { background:var(--surface3);color:var(--text); }
+.modal-body { padding:18px 22px; }
+.form-group { margin-bottom:14px; }
+.form-label { display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px; }
+.form-row { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+.form-row-3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px; }
+.modal-footer { display:flex;justify-content:flex-end;gap:8px;padding:0 22px 20px; }
+
+.tab-bar { display:flex;gap:4px;margin-bottom:18px;border-bottom:1px solid var(--border);padding-bottom:-1px; }
+.tab-btn { padding:9px 16px;font-size:13px;font-weight:500;color:var(--text3);cursor:pointer;border:none;background:none;font-family:inherit;border-bottom:2px solid transparent;transition:all .15s; }
+.tab-btn:hover { color:var(--text); }
+.tab-btn.active { color:var(--accent);border-bottom-color:var(--accent); }
+
+.chart-container { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px; }
+.chart-title { font-size:14px;font-weight:600;margin-bottom:14px; }
+.bar-chart { display:flex;align-items:flex-end;gap:8px;height:160px;padding-top:10px; }
+.bar-col { flex:1;display:flex;flex-direction:column;align-items:center;gap:4px; }
+.bar { width:100%;border-radius:4px 4px 0 0;transition:height .5s ease;min-height:2px; }
+.bar-label { font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%; }
+.bar-val { font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text2); }
+
+.summary-row { display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px; }
+.summary-card { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px; }
+.summary-card .label { font-size:12px;color:var(--text3);margin-bottom:4px; }
+.summary-card .val { font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:600; }
+
+.empty-state { text-align:center;padding:40px 20px;color:var(--text3); }
+.empty-state .icon { font-size:40px;margin-bottom:12px;opacity:.5; }
+.empty-state .msg { font-size:14px; }
+
+.log-item { display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border); }
+.log-item:last-child { border-bottom:none; }
+.log-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+.log-dot.in { background:var(--green); } .log-dot.out { background:var(--red); } .log-dot.edit { background:var(--yellow); }
+.log-dot.add { background:var(--accent); } .log-dot.delete { background:var(--text3); }
+.log-dot.purchase { background:var(--cyan); } .log-dot.sale { background:var(--purple); } .log-dot.stocktake { background:var(--yellow); }
+.log-text { font-size:13px;flex:1; }
+.log-time { font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;white-space:nowrap; }
+
+.toast-container { position:fixed;top:72px;right:20px;z-index:300;display:flex;flex-direction:column;gap:6px; }
+.toast { padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;font-size:13px;box-shadow:var(--shadow);max-width:300px;animation:fadeInUp .3s ease; }
+.toast.success { border-left:3px solid var(--green); }
+.toast.error { border-left:3px solid var(--red); }
+
+@keyframes fadeInUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+@media(max-width:768px){
+  .sidebar{display:none}
+  .main{padding:14px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .header{padding:0 14px}
+  .toolbar{flex-direction:column}
+  .search-box{min-width:100%}
+  .form-row,.form-row-3{grid-template-columns:1fr}
+  .mobile-nav{display:flex!important;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:100;padding:6px 8px;gap:2px;justify-content:space-around;overflow-x:auto}
+  .mobile-nav .m-nav{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;border-radius:8px;font-size:10px;color:var(--text3);cursor:pointer;background:none;border:none;font-family:inherit;white-space:nowrap}
+  .mobile-nav .m-nav.active{color:var(--accent)}
+  .mobile-nav .m-nav .icon{font-size:18px}
+  .main{padding-bottom:76px}
+}
+.mobile-nav{display:none}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo"><div class="logo-icon">📦</div><span>仓库管家 · 进销存</span></div>
+  <div class="header-actions">
+    <button class="btn" onclick="exportData()">📤 导出</button>
+    <button class="btn" onclick="importData()">📥 导入</button>
+    <button class="btn btn-primary" onclick="openItemModal()">＋ 新增商品</button>
+  </div>
+</div>
+
+<div class="app">
+<div class="sidebar">
+  <div class="nav-section">总览</div>
+  <div class="nav-item active" onclick="go('dashboard')" data-page="dashboard"><span class="icon">📊</span>仪表盘</div>
+  <div class="nav-section">进销存</div>
+  <div class="nav-item" onclick="go('inventory')" data-page="inventory"><span class="icon">📋</span>商品库存</div>
+  <div class="nav-item" onclick="go('purchase')" data-page="purchase"><span class="icon">🛒</span>采购管理</div>
+  <div class="nav-item" onclick="go('sales')" data-page="sales"><span class="icon">💰</span>销售管理</div>
+  <div class="nav-item" onclick="go('inout')" data-page="inout"><span class="icon">🔄</span>快速出入库</div>
+  <div class="nav-section">数据</div>
+  <div class="nav-item" onclick="go('suppliers')" data-page="suppliers"><span class="icon">🏭</span>供应商</div>
+  <div class="nav-item" onclick="go('customers')" data-page="customers"><span class="icon">👥</span>客户管理</div>
+  <div class="nav-item" onclick="go('stocktake')" data-page="stocktake"><span class="icon">📝</span>库存盘点</div>
+  <div class="nav-item" onclick="go('finance')" data-page="finance"><span class="icon">📈</span>财务报表</div>
+  <div class="nav-item" onclick="go('log')" data-page="log"><span class="icon">🕐</span>操作记录</div>
+  <div class="nav-section">设置</div>
+  <div class="nav-item" onclick="go('categories')" data-page="categories"><span class="icon">🏷️</span>分类管理</div>
+</div>
+
+<div class="main">
+
+<!-- ====== DASHBOARD ====== -->
+<div class="page active" id="page-dashboard">
+  <div class="page-title">仪表盘</div>
+  <div class="stats" id="dash-stats"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;" id="dash-charts"></div>
+  <div class="table-wrap">
+    <div class="table-header">⚠️ 低库存预警</div>
+    <table><thead><tr><th>商品</th><th>当前库存</th><th>预警值</th><th>操作</th></tr></thead>
+    <tbody id="low-body"></tbody></table>
+    <div class="empty-state" id="low-empty" style="display:none;padding:24px;"><div class="msg">✅ 所有商品库存充足</div></div>
+  </div>
+</div>
+
+<!-- ====== INVENTORY ====== -->
+<div class="page" id="page-inventory">
+  <div class="page-title">商品库存</div>
+  <div class="toolbar">
+    <div class="search-box"><span class="si">🔍</span><input id="inv-search" placeholder="搜索商品..." oninput="renderInv()"></div>
+    <select id="inv-cat" onchange="renderInv()"><option value="">全部分类</option></select>
+    <select id="inv-status" onchange="renderInv()"><option value="">全部状态</option><option value="ok">充足</option><option value="low">偏低</option><option value="out">缺货</option></select>
+    <button class="btn btn-primary" onclick="openItemModal()">＋ 新增</button>
+  </div>
+  <div class="table-wrap">
+    <table><thead><tr><th onclick="sortInv('name')">名称</th><th onclick="sortInv('sku')">编号</th><th>分类</th><th onclick="sortInv('quantity')">库存</th><th onclick="sortInv('costPrice')">成本价</th><th onclick="sortInv('salePrice')">售价</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody id="inv-body"></tbody></table>
+    <div class="empty-state" id="inv-empty" style="display:none;"><div class="icon">📦</div><div class="msg">暂无商品</div></div>
+  </div>
+</div>
+
+<!-- ====== PURCHASE ====== -->
+<div class="page" id="page-purchase">
+  <div class="page-title">采购管理</div>
+  <div class="toolbar">
+    <div class="search-box"><span class="si">🔍</span><input id="po-search" placeholder="搜索采购单..." oninput="renderPO()"></div>
+    <select id="po-status" onchange="renderPO()"><option value="">全部状态</option><option value="pending">待入库</option><option value="done">已完成</option><option value="cancel">已取消</option></select>
+    <button class="btn btn-primary" onclick="openPOModal()">＋ 新建采购单</button>
+  </div>
+  <div class="table-wrap">
+    <table><thead><tr><th>采购单号</th><th>供应商</th><th>商品</th><th>数量</th><th>采购金额</th><th>状态</th><th>日期</th><th>操作</th></tr></thead>
+    <tbody id="po-body"></tbody></table>
+    <div class="empty-state" id="po-empty" style="display:none;"><div class="icon">🛒</div><div class="msg">暂无采购记录</div></div>
+  </div>
+</div>
+
+<!-- ====== SALES ====== -->
+<div class="page" id="page-sales">
+  <div class="page-title">销售管理</div>
+  <div class="toolbar">
+    <div class="search-box"><span class="si">🔍</span><input id="so-search" placeholder="搜索销售单..." oninput="renderSO()"></div>
+    <select id="so-status" onchange="renderSO()"><option value="">全部状态</option><option value="pending">待出库</option><option value="done">已完成</option><option value="cancel">已取消</option></select>
+    <button class="btn btn-primary" onclick="openSOModal()">＋ 新建销售单</button>
+  </div>
+  <div class="table-wrap">
+    <table><thead><tr><th>销售单号</th><th>客户</th><th>商品</th><th>数量</th><th>销售金额</th><th>利润</th><th>状态</th><th>日期</th><th>操作</th></tr></thead>
+    <tbody id="so-body"></tbody></table>
+    <div class="empty-state" id="so-empty" style="display:none;"><div class="icon">💰</div><div class="msg">暂无销售记录</div></div>
+  </div>
+</div>
+
+<!-- ====== QUICK IN/OUT ====== -->
+<div class="page" id="page-inout">
+  <div class="page-title">快速出入库</div>
+  <div class="table-wrap" style="padding:22px;max-width:560px;">
+    <div class="form-group"><label class="form-label">选择商品</label><select id="io-item" class="form-input"></select></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">操作类型</label><select id="io-type" class="form-input"><option value="in">入库</option><option value="out">出库</option></select></div>
+      <div class="form-group"><label class="form-label">数量</label><input type="number" id="io-qty" class="form-input" min="1" value="1"></div>
+    </div>
+    <div class="form-group"><label class="form-label">备注</label><input type="text" id="io-note" class="form-input" placeholder="备注信息..."></div>
+    <button class="btn btn-primary" onclick="doIO()" style="margin-top:6px;">✅ 确认</button>
+  </div>
+</div>
+
+<!-- ====== SUPPLIERS ====== -->
+<div class="page" id="page-suppliers">
+  <div class="page-title">供应商管理</div>
+  <div class="toolbar"><button class="btn btn-primary" onclick="openSupModal()">＋ 新增供应商</button></div>
+  <div class="table-wrap">
+    <table><thead><tr><th>名称</th><th>联系人</th><th>电话</th><th>地址</th><th>采购次数</th><th>采购总额</th><th>操作</th></tr></thead>
+    <tbody id="sup-body"></tbody></table>
+    <div class="empty-state" id="sup-empty" style="display:none;"><div class="icon">🏭</div><div class="msg">暂无供应商</div></div>
+  </div>
+</div>
+
+<!-- ====== CUSTOMERS ====== -->
+<div class="page" id="page-customers">
+  <div class="page-title">客户管理</div>
+  <div class="toolbar"><button class="btn btn-primary" onclick="openCustModal()">＋ 新增客户</button></div>
+  <div class="table-wrap">
+    <table><thead><tr><th>名称</th><th>联系人</th><th>电话</th><th>地址</th><th>购买次数</th><th>消费总额</th><th>操作</th></tr></thead>
+    <tbody id="cust-body"></tbody></table>
+    <div class="empty-state" id="cust-empty" style="display:none;"><div class="icon">👥</div><div class="msg">暂无客户</div></div>
+  </div>
+</div>
+
+<!-- ====== STOCKTAKE ====== -->
+<div class="page" id="page-stocktake">
+  <div class="page-title">库存盘点</div>
+  <p style="color:var(--text2);font-size:13px;margin-bottom:16px;">核对系统库存与实际库存，如有差异可直接修正。</p>
+  <div class="toolbar"><button class="btn btn-green" onclick="doStocktake()">✅ 提交盘点结果</button></div>
+  <div class="table-wrap">
+    <table><thead><tr><th>商品名称</th><th>编号</th><th>系统库存</th><th>实际库存</th><th>差异</th></tr></thead>
+    <tbody id="st-body"></tbody></table>
+  </div>
+</div>
+
+<!-- ====== FINANCE ====== -->
+<div class="page" id="page-finance">
+  <div class="page-title">财务报表</div>
+  <div class="toolbar">
+    <select id="fin-period" onchange="renderFinance()">
+      <option value="all">全部时间</option>
+      <option value="month">本月</option>
+      <option value="week">本周</option>
+    </select>
+  </div>
+  <div class="summary-row" id="fin-summary"></div>
+  <div id="fin-charts"></div>
+  <div class="table-wrap">
+    <div class="table-header">📊 商品利润明细</div>
+    <table><thead><tr><th>商品</th><th>销售数量</th><th>销售收入</th><th>采购成本</th><th>毛利润</th><th>利润率</th></tr></thead>
+    <tbody id="fin-body"></tbody></table>
+  </div>
+</div>
+
+<!-- ====== LOG ====== -->
+<div class="page" id="page-log">
+  <div class="page-title">操作记录</div>
+  <div class="toolbar">
+    <select id="log-filter" onchange="renderLog()"><option value="">全部</option><option value="in">入库</option><option value="out">出库</option><option value="purchase">采购</option><option value="sale">销售</option><option value="add">新增</option><option value="edit">编辑</option><option value="delete">删除</option><option value="stocktake">盘点</option></select>
+    <button class="btn btn-danger btn-sm" onclick="clearLog()">清空</button>
+  </div>
+  <div class="table-wrap">
+    <div id="log-list"></div>
+    <div class="empty-state" id="log-empty" style="display:none;"><div class="icon">🕐</div><div class="msg">暂无记录</div></div>
+  </div>
+</div>
+
+<!-- ====== CATEGORIES ====== -->
+<div class="page" id="page-categories">
+  <div class="page-title">分类管理</div>
+  <div class="toolbar">
+    <input type="text" id="new-cat" class="form-input" placeholder="新分类名称" style="max-width:260px;">
+    <button class="btn btn-primary" onclick="addCat()">＋ 添加</button>
+  </div>
+  <div class="table-wrap">
+    <table><thead><tr><th>分类</th><th>商品数</th><th>操作</th></tr></thead>
+    <tbody id="cat-body"></tbody></table>
+  </div>
+</div>
+
+</div>
+</div>
+
+<!-- MOBILE NAV -->
+<div class="mobile-nav">
+  <button class="m-nav active" onclick="go('dashboard')" data-page="dashboard"><span class="icon">📊</span>概览</button>
+  <button class="m-nav" onclick="go('inventory')" data-page="inventory"><span class="icon">📋</span>库存</button>
+  <button class="m-nav" onclick="go('purchase')" data-page="purchase"><span class="icon">🛒</span>采购</button>
+  <button class="m-nav" onclick="go('sales')" data-page="sales"><span class="icon">💰</span>销售</button>
+  <button class="m-nav" onclick="go('finance')" data-page="finance"><span class="icon">📈</span>报表</button>
+</div>
+
+<!-- ====== GENERIC MODAL ====== -->
+<div class="modal-overlay" id="modal"><div class="modal">
+  <div class="modal-header"><div class="modal-title" id="m-title"></div><button class="modal-close" onclick="closeM()">✕</button></div>
+  <div class="modal-body" id="m-body"></div>
+  <div class="modal-footer" id="m-foot"></div>
+</div></div>
+
+<div class="toast-container" id="toasts"></div>
+<input type="file" id="imp-file" accept=".json" style="display:none" onchange="handleImp(event)">
+
+<script>
+// ===== DATA =====
+const D = {
+  items: [], purchases: [], sales: [], suppliers: [], customers: [], logs: [], categories: ['默认','电子产品','办公用品','食品','服装','其他']
+};
+const KEYS = ['items','purchases','sales','suppliers','customers','logs','categories'];
+function load() { KEYS.forEach(k => { const v = localStorage.getItem('psi_'+k); if(v) D[k] = JSON.parse(v); }); }
+function save() { KEYS.forEach(k => localStorage.setItem('psi_'+k, JSON.stringify(D[k]))); }
+load();
+
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function now() { return new Date().toISOString().slice(0,19).replace('T',' '); }
+function today() { return new Date().toISOString().slice(0,10); }
+function esc(s) { const d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
+function money(n) { return '¥'+Number(n||0).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function toast(msg,type='success') { const c=document.getElementById('toasts'),t=document.createElement('div');t.className='toast '+type;t.textContent=msg;c.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300)},2500); }
+function addLog(type,text) { D.logs.unshift({type,text,time:now()});if(D.logs.length>500)D.logs.length=500;save(); }
+
+// ===== NAV =====
+function go(p) {
+  document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.querySelectorAll('.nav-item,.m-nav').forEach(n=>n.classList.toggle('active',n.dataset.page===p));
+  const r = renders[p]; if(r) r();
+}
+const renders = { dashboard:renderDash, inventory:renderInv, purchase:renderPO, sales:renderSO, inout:renderIO, suppliers:renderSup, customers:renderCust, stocktake:renderST, finance:renderFinance, log:renderLog, categories:renderCat };
+
+// ===== MODAL UTIL =====
+function openM(title,bodyHtml,footHtml) {
+  document.getElementById('m-title').textContent=title;
+  document.getElementById('m-body').innerHTML=bodyHtml;
+  document.getElementById('m-foot').innerHTML=footHtml;
+  document.getElementById('modal').classList.add('open');
+}
+function closeM() { document.getElementById('modal').classList.remove('open'); }
+
+// ===== DASHBOARD =====
+function renderDash() {
+  const totalItems = D.items.length;
+  const totalQty = D.items.reduce((s,i)=>s+i.quantity,0);
+  const totalVal = D.items.reduce((s,i)=>s+i.quantity*i.costPrice,0);
+  const lowCount = D.items.filter(i=>i.quantity<=i.minStock).length;
+  const totalPurchase = D.purchases.filter(p=>p.status==='done').reduce((s,p)=>s+p.qty*p.price,0);
+  const totalSales = D.sales.filter(p=>p.status==='done').reduce((s,p)=>s+p.qty*p.price,0);
+  const totalProfit = D.sales.filter(p=>p.status==='done').reduce((s,p)=>{const it=D.items.find(i=>i.id===p.itemId);return s+p.qty*(p.price-(it?it.costPrice:0));},0);
+
+  document.getElementById('dash-stats').innerHTML = [
+    {l:'商品种类',v:totalItems,c:'var(--accent)'},
+    {l:'总库存量',v:totalQty.toLocaleString(),c:'var(--text)'},
+    {l:'库存价值',v:money(totalVal),c:'var(--green)'},
+    {l:'低库存预警',v:lowCount,c:lowCount?'var(--red)':'var(--green)'},
+    {l:'采购总额',v:money(totalPurchase),c:'var(--cyan)'},
+    {l:'销售总额',v:money(totalSales),c:'var(--purple)'},
+    {l:'总利润',v:money(totalProfit),c:totalProfit>=0?'var(--green)':'var(--red)'},
+  ].map(s=>`<div class="stat-card"><div class="stat-label">${s.l}</div><div class="stat-value" style="color:${s.c}">${s.v}</div></div>`).join('');
+
+  // Charts
+  const catData = {};
+  D.items.forEach(i => { catData[i.category||'未分类'] = (catData[i.category||'未分类']||0)+i.quantity; });
+  const maxQ = Math.max(...Object.values(catData),1);
+  const colors = ['var(--accent)','var(--green)','var(--purple)','var(--yellow)','var(--cyan)','var(--red)'];
+
+  const monthSales = {}, monthPurchase = {};
+  D.sales.filter(p=>p.status==='done').forEach(p => { const m=p.date.slice(0,7); monthSales[m]=(monthSales[m]||0)+p.qty*p.price; });
+  D.purchases.filter(p=>p.status==='done').forEach(p => { const m=p.date.slice(0,7); monthPurchase[m]=(monthPurchase[m]||0)+p.qty*p.price; });
+  const allMonths = [...new Set([...Object.keys(monthSales),...Object.keys(monthPurchase)])].sort().slice(-6);
+  const maxM = Math.max(...allMonths.map(m=>Math.max(monthSales[m]||0,monthPurchase[m]||0)),1);
+
+  document.getElementById('dash-charts').innerHTML = `
+    <div class="chart-container"><div class="chart-title">📦 各分类库存量</div><div class="bar-chart">${Object.entries(catData).map(([k,v],i)=>`<div class="bar-col"><div class="bar-val">${v}</div><div class="bar" style="height:${v/maxQ*130}px;background:${colors[i%colors.length]}"></div><div class="bar-label">${esc(k)}</div></div>`).join('')}</div></div>
+    <div class="chart-container"><div class="chart-title">📈 月度进销对比</div><div class="bar-chart">${allMonths.length?allMonths.map(m=>`<div class="bar-col" style="gap:2px"><div class="bar-val" style="font-size:9px">${Math.round((monthSales[m]||0)/100)/10}k</div><div style="display:flex;gap:3px;align-items:flex-end;width:100%;height:130px"><div class="bar" style="height:${(monthPurchase[m]||0)/maxM*130}px;background:var(--cyan);flex:1" title="采购"></div><div class="bar" style="height:${(monthSales[m]||0)/maxM*130}px;background:var(--purple);flex:1" title="销售"></div></div><div class="bar-label">${m.slice(5)}</div></div>`).join(''):'<div style="color:var(--text3);text-align:center;width:100%;padding:40px 0;font-size:13px">暂无数据</div>'}</div>${allMonths.length?'<div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--text3)"><span>🟦 采购</span><span>🟪 销售</span></div>':''}</div>
+  `;
+
+  // Low stock
+  const lows = D.items.filter(i=>i.quantity<=i.minStock);
+  document.getElementById('low-body').innerHTML = lows.map(i=>`<tr><td>${esc(i.name)}</td><td style="color:var(--red);font-weight:600">${i.quantity} ${esc(i.unit)}</td><td>${i.minStock}</td><td><button class="btn btn-sm btn-primary" onclick="go('purchase');setTimeout(()=>openPOModal('${i.id}'),100)">采购</button></td></tr>`).join('');
+  document.getElementById('low-empty').style.display = lows.length?'none':'block';
+}
+
+// ===== INVENTORY =====
+let invSort='name', invDir=1;
+function sortInv(f) { if(invSort===f)invDir*=-1;else{invSort=f;invDir=1;}renderInv(); }
+function renderInv() {
+  const s=document.getElementById('inv-search').value.toLowerCase(), cat=document.getElementById('inv-cat').value, st=document.getElementById('inv-status').value;
+  let f = D.items.filter(i=>{
+    if(s && !i.name.toLowerCase().includes(s) && !(i.sku||'').toLowerCase().includes(s)) return false;
+    if(cat && i.category!==cat) return false;
+    if(st==='ok' && i.quantity<=i.minStock) return false;
+    if(st==='low' && !(i.quantity>0 && i.quantity<=i.minStock)) return false;
+    if(st==='out' && i.quantity>0) return false;
+    return true;
+  });
+  f.sort((a,b)=>{ let va=a[invSort],vb=b[invSort]; if(typeof va==='string')va=va.toLowerCase(); if(typeof vb==='string')vb=vb.toLowerCase(); return (va<vb?-1:va>vb?1:0)*invDir; });
+  const body=document.getElementById('inv-body');
+  if(!f.length) { body.innerHTML=''; document.getElementById('inv-empty').style.display='block'; return; }
+  document.getElementById('inv-empty').style.display='none';
+  body.innerHTML = f.map(i=>{
+    const st=i.quantity<=0?'out':i.quantity<=i.minStock?'low':'ok';
+    const stL=st==='out'?'缺货':st==='low'?'偏低':'充足';
+    return `<tr><td>${esc(i.name)}</td><td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text3)">${esc(i.sku)}</td><td>${esc(i.category)}</td><td><strong>${i.quantity}</strong> ${esc(i.unit)}</td><td>${money(i.costPrice)}</td><td>${money(i.salePrice)}</td><td><span class="badge badge-${st}">● ${stL}</span></td><td><div class="actions-cell"><button class="action-btn" onclick="openItemModal('${i.id}')" title="编辑">✏️</button><button class="action-btn del" onclick="delItem('${i.id}')" title="删除">🗑️</button></div></td></tr>`;
+  }).join('');
+  // update filter
+  document.getElementById('inv-cat').innerHTML = '<option value="">全部分类</option>'+D.categories.map(c=>`<option value="${c}" ${c===cat?'selected':''}>${c}</option>`).join('');
+}
+
+function openItemModal(id) {
+  const i = id ? D.items.find(x=>x.id===id) : null;
+  const catOpts = D.categories.map(c=>`<option value="${c}" ${i&&i.category===c?'selected':''}>${c}</option>`).join('');
+  openM(i?'编辑商品':'新增商品', `
+    <input type="hidden" id="fi-id" value="${id||''}">
+    <div class="form-group"><label class="form-label">商品名称 *</label><input class="form-input" id="fi-name" value="${esc(i?i.name:'')}"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">编号/SKU</label><input class="form-input" id="fi-sku" value="${esc(i?i.sku:'SKU-'+String(D.items.length+1).padStart(4,'0'))}"></div>
+      <div class="form-group"><label class="form-label">分类</label><select class="form-input" id="fi-cat">${catOpts}</select></div>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group"><label class="form-label">库存数量</label><input type="number" class="form-input" id="fi-qty" min="0" value="${i?i.quantity:0}"></div>
+      <div class="form-group"><label class="form-label">成本价</label><input type="number" class="form-input" id="fi-cost" min="0" step="0.01" value="${i?i.costPrice:0}"></div>
+      <div class="form-group"><label class="form-label">售价</label><input type="number" class="form-input" id="fi-sale" min="0" step="0.01" value="${i?i.salePrice:0}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">单位</label><input class="form-input" id="fi-unit" value="${esc(i?i.unit:'个')}"></div>
+      <div class="form-group"><label class="form-label">预警值</label><input type="number" class="form-input" id="fi-min" min="0" value="${i?i.minStock:10}"></div>
+    </div>
+    <div class="form-group"><label class="form-label">备注</label><input class="form-input" id="fi-note" value="${esc(i?i.note:'')}"></div>
+  `, `<button class="btn" onclick="closeM()">取消</button><button class="btn btn-primary" onclick="saveItem()">保存</button>`);
+}
+
+function saveItem() {
+  const id=document.getElementById('fi-id').value, name=document.getElementById('fi-name').value.trim();
+  if(!name){toast('请输入名称','error');return;}
+  const data = {
+    name, sku:document.getElementById('fi-sku').value.trim()||'SKU-'+String(D.items.length+1).padStart(4,'0'),
+    category:document.getElementById('fi-cat').value, quantity:Math.max(0,parseInt(document.getElementById('fi-qty').value)||0),
+    costPrice:Math.max(0,parseFloat(document.getElementById('fi-cost').value)||0), salePrice:Math.max(0,parseFloat(document.getElementById('fi-sale').value)||0),
+    unit:document.getElementById('fi-unit').value.trim()||'个', minStock:Math.max(0,parseInt(document.getElementById('fi-min').value)||0),
+    note:document.getElementById('fi-note').value.trim()
+  };
+  if(id) { const idx=D.items.findIndex(x=>x.id===id); if(idx>=0)D.items[idx]={...D.items[idx],...data}; addLog('edit',`编辑商品"${name}"`); toast('已更新'); }
+  else { D.items.push({id:uid(),...data,createdAt:now()}); addLog('add',`新增商品"${name}"，库存${data.quantity}`); toast('已添加'); }
+  save(); closeM(); refreshAll();
+}
+
+function delItem(id) { const i=D.items.find(x=>x.id===id); if(!i||!confirm(`删除"${i.name}"？`))return; D.items=D.items.filter(x=>x.id!==id); addLog('delete',`删除"${i.name}"`); save(); toast('已删除'); refreshAll(); }
+
+// ===== PURCHASE =====
+function renderPO() {
+  const s=document.getElementById('po-search').value.toLowerCase(), st=document.getElementById('po-status').value;
+  let f=D.purchases.filter(p=>{
+    if(s && !p.no.toLowerCase().includes(s) && !(p.supplierName||'').toLowerCase().includes(s)) return false;
+    if(st && p.status!==st) return false; return true;
+  });
+  f.sort((a,b)=>b.date.localeCompare(a.date));
+  const body=document.getElementById('po-body');
+  if(!f.length){body.innerHTML='';document.getElementById('po-empty').style.display='block';return;}
+  document.getElementById('po-empty').style.display='none';
+  body.innerHTML=f.map(p=>{
+    const it=D.items.find(i=>i.id===p.itemId);
+    const stCls=p.status==='done'?'done':p.status==='cancel'?'cancel':'pending';
+    const stL=p.status==='done'?'已完成':p.status==='cancel'?'已取消':'待入库';
+    return `<tr><td style="font-family:'JetBrains Mono',monospace;font-size:12px">${esc(p.no)}</td><td>${esc(p.supplierName||'-')}</td><td>${esc(it?it.name:'已删除')}</td><td>${p.qty}</td><td>${money(p.qty*p.price)}</td><td><span class="badge badge-${stCls}">${stL}</span></td><td style="font-size:12px;color:var(--text3)">${p.date}</td><td><div class="actions-cell">${p.status==='pending'?`<button class="btn btn-sm btn-green" onclick="completePO('${p.id}')">入库</button><button class="btn btn-sm btn-danger" onclick="cancelPO('${p.id}')">取消</button>`:''}</div></td></tr>`;
+  }).join('');
+}
+
+function openPOModal(preItemId) {
+  const itemOpts=D.items.map(i=>`<option value="${i.id}" ${i.id===preItemId?'selected':''}>${i.name}</option>`).join('');
+  const supOpts='<option value="">无</option>'+D.suppliers.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  openM('新建采购单',`
+    <div class="form-group"><label class="form-label">商品 *</label><select class="form-input" id="fp-item">${itemOpts}</select></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">数量 *</label><input type="number" class="form-input" id="fp-qty" min="1" value="1"></div>
+      <div class="form-group"><label class="form-label">采购单价</label><input type="number" class="form-input" id="fp-price" min="0" step="0.01" value="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">供应商</label><select class="form-input" id="fp-sup">${supOpts}</select></div>
+      <div class="form-group"><label class="form-label">日期</label><input type="date" class="form-input" id="fp-date" value="${today()}"></div>
+    </div>
+    <div class="form-group"><label class="form-label">备注</label><input class="form-input" id="fp-note"></div>
+  `,`<button class="btn" onclick="closeM()">取消</button><button class="btn btn-primary" onclick="savePO()">创建</button>`);
+  // auto fill price
+  if(preItemId) { const it=D.items.find(i=>i.id===preItemId); if(it) document.getElementById('fp-price').value=it.costPrice; }
+  document.getElementById('fp-item').addEventListener('change',function(){ const it=D.items.find(i=>i.id===this.value); if(it)document.getElementById('fp-price').value=it.costPrice; });
+}
+
+function savePO() {
+  const itemId=document.getElementById('fp-item').value, qty=parseInt(document.getElementById('fp-qty').value)||0;
+  if(!itemId||qty<=0){toast('请选择商品和数量','error');return;}
+  const price=parseFloat(document.getElementById('fp-price').value)||0;
+  const supId=document.getElementById('fp-sup').value;
+  const sup=D.suppliers.find(s=>s.id===supId);
+  D.purchases.push({id:uid(),no:'PO-'+Date.now().toString().slice(-8),itemId,qty,price,supplierId:supId,supplierName:sup?sup.name:'',date:document.getElementById('fp-date').value,note:document.getElementById('fp-note').value,status:'pending'});
+  const it=D.items.find(i=>i.id===itemId);
+  addLog('purchase',`新建采购单：${it?it.name:'?'} × ${qty}，单价${money(price)}`);
+  save();closeM();toast('采购单已创建');renderPO();
+}
+
+function completePO(id) {
+  const p=D.purchases.find(x=>x.id===id); if(!p)return;
+  const it=D.items.find(i=>i.id===p.itemId);
+  if(it) { it.quantity+=p.qty; if(p.price>0) it.costPrice=p.price; }
+  p.status='done';
+  addLog('purchase',`采购入库：${it?it.name:'?'} × ${p.qty}，${money(p.qty*p.price)}`);
+  save();toast('已入库');refreshAll();
+}
+function cancelPO(id) { const p=D.purchases.find(x=>x.id===id);if(!p)return;p.status='cancel';addLog('purchase',`取消采购单${p.no}`);save();toast('已取消');renderPO(); }
+
+// ===== SALES =====
+function renderSO() {
+  const s=document.getElementById('so-search').value.toLowerCase(), st=document.getElementById('so-status').value;
+  let f=D.sales.filter(p=>{
+    if(s && !p.no.toLowerCase().includes(s) && !(p.customerName||'').toLowerCase().includes(s)) return false;
+    if(st && p.status!==st) return false; return true;
+  });
+  f.sort((a,b)=>b.date.localeCompare(a.date));
+  const body=document.getElementById('so-body');
+  if(!f.length){body.innerHTML='';document.getElementById('so-empty').style.display='block';return;}
+  document.getElementById('so-empty').style.display='none';
+  body.innerHTML=f.map(p=>{
+    const it=D.items.find(i=>i.id===p.itemId);
+    const cost=it?it.costPrice:0;
+    const profit=p.qty*(p.price-cost);
+    const stCls=p.status==='done'?'done':p.status==='cancel'?'cancel':'pending';
+    const stL=p.status==='done'?'已完成':p.status==='cancel'?'已取消':'待出库';
+    return `<tr><td style="font-family:'JetBrains Mono',monospace;font-size:12px">${esc(p.no)}</td><td>${esc(p.customerName||'-')}</td><td>${esc(it?it.name:'已删除')}</td><td>${p.qty}</td><td>${money(p.qty*p.price)}</td><td style="color:${profit>=0?'var(--green)':'var(--red)'}">${money(profit)}</td><td><span class="badge badge-${stCls}">${stL}</span></td><td style="font-size:12px;color:var(--text3)">${p.date}</td><td><div class="actions-cell">${p.status==='pending'?`<button class="btn btn-sm btn-green" onclick="completeSO('${p.id}')">出库</button><button class="btn btn-sm btn-danger" onclick="cancelSO('${p.id}')">取消</button>`:''}</div></td></tr>`;
+  }).join('');
+}
+
+function openSOModal() {
+  const itemOpts=D.items.map(i=>`<option value="${i.id}">${i.name} (库存:${i.quantity})</option>`).join('');
+  const custOpts='<option value="">散客</option>'+D.customers.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  openM('新建销售单',`
+    <div class="form-group"><label class="form-label">商品 *</label><select class="form-input" id="fs-item">${itemOpts}</select></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">数量 *</label><input type="number" class="form-input" id="fs-qty" min="1" value="1"></div>
+      <div class="form-group"><label class="form-label">销售单价</label><input type="number" class="form-input" id="fs-price" min="0" step="0.01" value="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">客户</label><select class="form-input" id="fs-cust">${custOpts}</select></div>
+      <div class="form-group"><label class="form-label">日期</label><input type="date" class="form-input" id="fs-date" value="${today()}"></div>
+    </div>
+    <div class="form-group"><label class="form-label">备注</label><input class="form-input" id="fs-note"></div>
+  `,`<button class="btn" onclick="closeM()">取消</button><button class="btn btn-primary" onclick="saveSO()">创建</button>`);
+  document.getElementById('fs-item').addEventListener('change',function(){ const it=D.items.find(i=>i.id===this.value); if(it)document.getElementById('fs-price').value=it.salePrice; });
+  const first=D.items[0]; if(first)document.getElementById('fs-price').value=first.salePrice;
+}
+
+function saveSO() {
+  const itemId=document.getElementById('fs-item').value, qty=parseInt(document.getElementById('fs-qty').value)||0;
+  if(!itemId||qty<=0){toast('请选择商品和数量','error');return;}
+  const it=D.items.find(i=>i.id===itemId);
+  const price=parseFloat(document.getElementById('fs-price').value)||0;
+  const custId=document.getElementById('fs-cust').value;
+  const cust=D.customers.find(c=>c.id===custId);
+  D.sales.push({id:uid(),no:'SO-'+Date.now().toString().slice(-8),itemId,qty,price,customerId:custId,customerName:cust?cust.name:'散客',date:document.getElementById('fs-date').value,note:document.getElementById('fs-note').value,status:'pending'});
+  addLog('sale',`新建销售单：${it?it.name:'?'} × ${qty}，单价${money(price)}`);
+  save();closeM();toast('销售单已创建');renderSO();
+}
+
+function completeSO(id) {
+  const p=D.sales.find(x=>x.id===id); if(!p)return;
+  const it=D.items.find(i=>i.id===p.itemId);
+  if(it) { if(it.quantity<p.qty){toast('库存不足！','error');return;} it.quantity-=p.qty; }
+  p.status='done';
+  addLog('sale',`销售出库：${it?it.name:'?'} × ${p.qty}，${money(p.qty*p.price)}`);
+  save();toast('已出库');refreshAll();
+}
+function cancelSO(id) { const p=D.sales.find(x=>x.id===id);if(!p)return;p.status='cancel';addLog('sale',`取消销售单${p.no}`);save();toast('已取消');renderSO(); }
+
+// ===== QUICK IO =====
+function renderIO() {
+  document.getElementById('io-item').innerHTML = D.items.length?D.items.map(i=>`<option value="${i.id}">${i.name} (${i.quantity} ${i.unit})</option>`).join(''):'<option value="">暂无商品</option>';
+}
+function doIO() {
+  const id=document.getElementById('io-item').value, type=document.getElementById('io-type').value, qty=parseInt(document.getElementById('io-qty').value)||0, note=document.getElementById('io-note').value;
+  if(!id){toast('请先添加商品','error');return;} if(qty<=0){toast('数量须>0','error');return;}
+  const i=D.items.find(x=>x.id===id);if(!i)return;
+  if(type==='out'&&i.quantity<qty){toast('库存不足','error');return;}
+  if(type==='in')i.quantity+=qty; else i.quantity-=qty;
+  addLog(type,`${type==='in'?'入库':'出库'}"${i.name}" × ${qty}${note?' ('+note+')':''}，余${i.quantity}`);
+  save();toast(`${type==='in'?'入库':'出库'}成功`);document.getElementById('io-qty').value=1;document.getElementById('io-note').value='';renderIO();refreshAll();
+}
+
+// ===== SUPPLIERS =====
+function renderSup() {
+  const body=document.getElementById('sup-body');
+  if(!D.suppliers.length){body.innerHTML='';document.getElementById('sup-empty').style.display='block';return;}
+  document.getElementById('sup-empty').style.display='none';
+  body.innerHTML=D.suppliers.map(s=>{
+    const pos=D.purchases.filter(p=>p.supplierId===s.id&&p.status==='done');
+    return `<tr><td><strong>${esc(s.name)}</strong></td><td>${esc(s.contact)}</td><td>${esc(s.phone)}</td><td>${esc(s.address)}</td><td>${pos.length}</td><td>${money(pos.reduce((a,p)=>a+p.qty*p.price,0))}</td><td><div class="actions-cell"><button class="action-btn" onclick="openSupModal('${s.id}')">✏️</button><button class="action-btn del" onclick="delSup('${s.id}')">🗑️</button></div></td></tr>`;
+  }).join('');
+}
+
+function openSupModal(id) {
+  const s=id?D.suppliers.find(x=>x.id===id):null;
+  openM(s?'编辑供应商':'新增供应商',`
+    <input type="hidden" id="fsu-id" value="${id||''}">
+    <div class="form-group"><label class="form-label">名称 *</label><input class="form-input" id="fsu-name" value="${esc(s?s.name:'')}"></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">联系人</label><input class="form-input" id="fsu-contact" value="${esc(s?s.contact:'')}"></div><div class="form-group"><label class="form-label">电话</label><input class="form-input" id="fsu-phone" value="${esc(s?s.phone:'')}"></div></div>
+    <div class="form-group"><label class="form-label">地址</label><input class="form-input" id="fsu-addr" value="${esc(s?s.address:'')}"></div>
+    <div class="form-group"><label class="form-label">备注</label><input class="form-input" id="fsu-note" value="${esc(s?s.note:'')}"></div>
+  `,`<button class="btn" onclick="closeM()">取消</button><button class="btn btn-primary" onclick="saveSup()">保存</button>`);
+}
+function saveSup() {
+  const id=document.getElementById('fsu-id').value,name=document.getElementById('fsu-name').value.trim();if(!name){toast('请输入名称','error');return;}
+  const data={name,contact:document.getElementById('fsu-contact').value,phone:document.getElementById('fsu-phone').value,address:document.getElementById('fsu-addr').value,note:document.getElementById('fsu-note').value};
+  if(id){const idx=D.suppliers.findIndex(x=>x.id===id);if(idx>=0)D.suppliers[idx]={...D.suppliers[idx],...data};toast('已更新');}
+  else{D.suppliers.push({id:uid(),...data});toast('已添加');}
+  save();closeM();renderSup();
+}
+function delSup(id){const s=D.suppliers.find(x=>x.id===id);if(!s||!confirm(`删除"${s.name}"？`))return;D.suppliers=D.suppliers.filter(x=>x.id!==id);save();toast('已删除');renderSup();}
+
+// ===== CUSTOMERS =====
+function renderCust() {
+  const body=document.getElementById('cust-body');
+  if(!D.customers.length){body.innerHTML='';document.getElementById('cust-empty').style.display='block';return;}
+  document.getElementById('cust-empty').style.display='none';
+  body.innerHTML=D.customers.map(c=>{
+    const sos=D.sales.filter(p=>p.customerId===c.id&&p.status==='done');
+    return `<tr><td><strong>${esc(c.name)}</strong></td><td>${esc(c.contact)}</td><td>${esc(c.phone)}</td><td>${esc(c.address)}</td><td>${sos.length}</td><td>${money(sos.reduce((a,p)=>a+p.qty*p.price,0))}</td><td><div class="actions-cell"><button class="action-btn" onclick="openCustModal('${c.id}')">✏️</button><button class="action-btn del" onclick="delCust('${c.id}')">🗑️</button></div></td></tr>`;
+  }).join('');
+}
+function openCustModal(id) {
+  const c=id?D.customers.find(x=>x.id===id):null;
+  openM(c?'编辑客户':'新增客户',`
+    <input type="hidden" id="fc-id" value="${id||''}">
+    <div class="form-group"><label class="form-label">名称 *</label><input class="form-input" id="fc-name" value="${esc(c?c.name:'')}"></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">联系人</label><input class="form-input" id="fc-contact" value="${esc(c?c.contact:'')}"></div><div class="form-group"><label class="form-label">电话</label><input class="form-input" id="fc-phone" value="${esc(c?c.phone:'')}"></div></div>
+    <div class="form-group"><label class="form-label">地址</label><input class="form-input" id="fc-addr" value="${esc(c?c.address:'')}"></div>
+  `,`<button class="btn" onclick="closeM()">取消</button><button class="btn btn-primary" onclick="saveCust()">保存</button>`);
+}
+function saveCust() {
+  const id=document.getElementById('fc-id').value,name=document.getElementById('fc-name').value.trim();if(!name){toast('请输入名称','error');return;}
+  const data={name,contact:document.getElementById('fc-contact').value,phone:document.getElementById('fc-phone').value,address:document.getElementById('fc-addr').value};
+  if(id){const idx=D.customers.findIndex(x=>x.id===id);if(idx>=0)D.customers[idx]={...D.customers[idx],...data};toast('已更新');}
+  else{D.customers.push({id:uid(),...data});toast('已添加');}
+  save();closeM();renderCust();
+}
+function delCust(id){const c=D.customers.find(x=>x.id===id);if(!c||!confirm(`删除"${c.name}"？`))return;D.customers=D.customers.filter(x=>x.id!==id);save();toast('已删除');renderCust();}
+
+// ===== STOCKTAKE =====
+function renderST() {
+  document.getElementById('st-body').innerHTML = D.items.map(i=>`<tr><td>${esc(i.name)}</td><td style="font-size:12px;color:var(--text3)">${esc(i.sku)}</td><td>${i.quantity} ${esc(i.unit)}</td><td><input type="number" class="form-input" style="width:100px" data-st-id="${i.id}" value="${i.quantity}" min="0"></td><td class="st-diff" data-st-diff="${i.id}" style="font-weight:600">0</td></tr>`).join('');
+  document.querySelectorAll('[data-st-id]').forEach(inp=>{
+    inp.addEventListener('input',function(){
+      const id=this.dataset.stId, it=D.items.find(i=>i.id===id);
+      if(!it)return;
+      const diff=(parseInt(this.value)||0)-it.quantity;
+      const td=document.querySelector(`[data-st-diff="${id}"]`);
+      td.textContent=diff>0?'+'+diff:diff;
+      td.style.color=diff>0?'var(--green)':diff<0?'var(--red)':'var(--text3)';
+    });
+  });
+}
+function doStocktake() {
+  let changes=0;
+  document.querySelectorAll('[data-st-id]').forEach(inp=>{
+    const id=inp.dataset.stId, it=D.items.find(i=>i.id===id);if(!it)return;
+    const newQty=Math.max(0,parseInt(inp.value)||0);
+    if(newQty!==it.quantity){
+      addLog('stocktake',`盘点"${it.name}"：${it.quantity}→${newQty}（差异${newQty-it.quantity>0?'+':''}${newQty-it.quantity}）`);
+      it.quantity=newQty; changes++;
+    }
+  });
+  save();
+  if(changes) toast(`盘点完成，${changes}项已更新`); else toast('无差异');
+  refreshAll();
+}
+
+// ===== FINANCE =====
+function renderFinance() {
+  const period=document.getElementById('fin-period').value;
+  const nowDate=new Date();
+  const filterDate = d => {
+    if(period==='all') return true;
+    const dd=new Date(d);
+    if(period==='month') return dd.getMonth()===nowDate.getMonth()&&dd.getFullYear()===nowDate.getFullYear();
+    if(period==='week') { const diff=nowDate-dd; return diff>=0&&diff<7*86400000; }
+    return true;
+  };
+
+  const donePO=D.purchases.filter(p=>p.status==='done'&&filterDate(p.date));
+  const doneSO=D.sales.filter(p=>p.status==='done'&&filterDate(p.date));
+  const totalPurchase=donePO.reduce((s,p)=>s+p.qty*p.price,0);
+  const totalSales=doneSO.reduce((s,p)=>s+p.qty*p.price,0);
+  const totalProfit=doneSO.reduce((s,p)=>{const it=D.items.find(i=>i.id===p.itemId);return s+p.qty*(p.price-(it?it.costPrice:0));},0);
+  const profitRate=totalSales?((totalProfit/totalSales)*100).toFixed(1):0;
+
+  document.getElementById('fin-summary').innerHTML = [
+    {l:'采购总额',v:money(totalPurchase),c:'var(--cyan)'},
+    {l:'销售总额',v:money(totalSales),c:'var(--purple)'},
+    {l:'毛利润',v:money(totalProfit),c:totalProfit>=0?'var(--green)':'var(--red)'},
+    {l:'利润率',v:profitRate+'%',c:'var(--yellow)'},
+  ].map(s=>`<div class="summary-card"><div class="label">${s.l}</div><div class="val" style="color:${s.c}">${s.v}</div></div>`).join('');
+
+  // Per-item breakdown
+  const itemStats={};
+  doneSO.forEach(p=>{
+    if(!itemStats[p.itemId])itemStats[p.itemId]={qty:0,revenue:0,cost:0};
+    const it=D.items.find(i=>i.id===p.itemId);
+    itemStats[p.itemId].qty+=p.qty;
+    itemStats[p.itemId].revenue+=p.qty*p.price;
+    itemStats[p.itemId].cost+=p.qty*(it?it.costPrice:0);
+  });
+  const rows=Object.entries(itemStats).map(([id,s])=>{
+    const it=D.items.find(i=>i.id===id);
+    const profit=s.revenue-s.cost;
+    const rate=s.revenue?((profit/s.revenue)*100).toFixed(1):0;
+    return {name:it?it.name:'已删除',qty:s.qty,revenue:s.revenue,cost:s.cost,profit,rate};
+  }).sort((a,b)=>b.profit-a.profit);
+
+  document.getElementById('fin-body').innerHTML = rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${r.qty}</td><td>${money(r.revenue)}</td><td>${money(r.cost)}</td><td style="color:${r.profit>=0?'var(--green)':'var(--red)'}; font-weight:600">${money(r.profit)}</td><td>${r.rate}%</td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:30px">暂无数据</td></tr>';
+
+  // Chart
+  const topItems=rows.slice(0,8);
+  const maxR=Math.max(...topItems.map(r=>r.revenue),1);
+  document.getElementById('fin-charts').innerHTML = topItems.length ? `<div class="chart-container"><div class="chart-title">💰 商品销售排行</div><div class="bar-chart">${topItems.map((r,i)=>{const colors=['var(--accent)','var(--green)','var(--purple)','var(--yellow)','var(--cyan)','var(--red)','var(--text2)','var(--accent2)'];return `<div class="bar-col"><div class="bar-val">${Math.round(r.revenue)}</div><div class="bar" style="height:${r.revenue/maxR*130}px;background:${colors[i%colors.length]}"></div><div class="bar-label">${esc(r.name)}</div></div>`;}).join('')}</div></div>` : '';
+}
+
+// ===== LOG =====
+function renderLog() {
+  const f=document.getElementById('log-filter').value;
+  const filtered=f?D.logs.filter(l=>l.type===f):D.logs;
+  const list=document.getElementById('log-list');
+  if(!filtered.length){list.innerHTML='';document.getElementById('log-empty').style.display='block';return;}
+  document.getElementById('log-empty').style.display='none';
+  list.innerHTML=filtered.slice(0,200).map(l=>`<div class="log-item"><div class="log-dot ${l.type}"></div><div class="log-text">${esc(l.text)}</div><div class="log-time">${l.time}</div></div>`).join('');
+}
+function clearLog(){if(!confirm('确定清空？'))return;D.logs=[];save();renderLog();toast('已清空');}
+
+// ===== CATEGORIES =====
+function renderCat() {
+  document.getElementById('cat-body').innerHTML=D.categories.map(c=>{
+    const cnt=D.items.filter(i=>i.category===c).length;
+    return `<tr><td><strong>${esc(c)}</strong></td><td>${cnt}</td><td><button class="action-btn del" onclick="delCat('${esc(c)}')">🗑️</button></td></tr>`;
+  }).join('');
+}
+function addCat(){const inp=document.getElementById('new-cat'),n=inp.value.trim();if(!n)return;if(D.categories.includes(n)){toast('已存在','error');return;}D.categories.push(n);save();inp.value='';renderCat();toast('已添加');}
+function delCat(n){if(!confirm(`删除分类"${n}"？`))return;D.categories=D.categories.filter(c=>c!==n);save();renderCat();toast('已删除');}
+
+// ===== EXPORT / IMPORT =====
+function exportData(){const blob=new Blob([JSON.stringify(D,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='进销存数据_'+today()+'.json';a.click();toast('已导出');}
+function importData(){document.getElementById('imp-file').click();}
+function handleImp(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=function(ev){try{const d=JSON.parse(ev.target.result);KEYS.forEach(k=>{if(d[k])D[k]=d[k]});save();refreshAll();toast('导入成功');}catch{toast('文件格式错误','error');}};r.readAsText(file);e.target.value='';}
+
+// ===== REFRESH ALL =====
+function refreshAll() { const active=document.querySelector('.page.active'); if(active){const p=active.id.replace('page-','');const r=renders[p];if(r)r();} }
+
+// ===== INIT =====
+renderDash();
+</script>
+</body>
+</html>
